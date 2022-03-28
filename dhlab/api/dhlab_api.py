@@ -1,4 +1,4 @@
-from typing import Union, List
+from typing import Union, List, Tuple
 
 import pandas as pd
 import requests
@@ -16,7 +16,7 @@ def get_places(urn: str, **kwargs) -> pd.DataFrame:
     Call the API :py:obj:`~dhlab.constants.BASE_URL` endpoint
     `/places <https://api.nb.no/dhlab/#/default/post_places>`_.
 
-    :param urn: uniform resource name, example: ``URN:NBN:no-nb_digibok_2011051112001``
+    :param str urn: uniform resource name, example: ``URN:NBN:no-nb_digibok_2011051112001``
     :param kwargs:
         - feature_class: str, a GeoNames feature class. Example: ``P``
         - feature_code: str, a GeoNames feature code. Example: ``PPL``
@@ -34,10 +34,10 @@ def get_dispersion(
 
     Call the API :py:obj:`~dhlab.constants.BASE_URL` endpoint ``/dispersion``.
 
-    :param urn: uniform resource name, example: ``URN:NBN:no-nb_digibok_2011051112001``
-    :param words: list of words. Defaults to a list of punctuation marks.
-    :param window: The number of tokens to search through per row. Defaults to 300.
-    :param pr: defaults to 100.
+    :param str urn: uniform resource name, example: ``URN:NBN:no-nb_digibok_2011051112001``
+    :param list words: list of words. Defaults to a list of punctuation marks.
+    :param int window: The number of tokens to search through per row. Defaults to 300.
+    :param int pr: defaults to 100.
     :return: a ``pandas.Series`` with frequency counts of the words in the URN object.
 
     .. todo:: Verify parameter descriptions.
@@ -52,6 +52,9 @@ def get_metadata(urns: List[str] = None) -> pd.DataFrame:
 
     Calls the API :py:obj:`~dhlab.constants.BASE_URL` endpoint
     `/get_metadata <https://api.nb.no/dhlab/#/default/post_get_metadata>`_.
+
+    :param list urns: list of uniform resource names, example:
+        ``URN:NBN:no-nb_digibok_2011051112001``
     """
     params = locals()
     r = requests.post(f"{BASE_URL}/get_metadata", json=params)
@@ -65,8 +68,8 @@ def get_chunks(urn: str = None, chunk_size: int = 300) -> dict:
     Calls the API :py:obj:`~dhlab.constants.BASE_URL` endpoint
     ``/chunks``.
 
-    :param urn: uniform resource name, example: ``URN:NBN:no-nb_digibok_2011051112001``
-    :param chunk_size: Number of tokens to include in each chunk.
+    :param str urn: uniform resource name, example: ``URN:NBN:no-nb_digibok_2011051112001``
+    :param int chunk_size: Number of tokens to include in each chunk.
 
     .. todo:: Verify unit of ``chunk_size``
     """
@@ -87,7 +90,7 @@ def get_chunks_para(urn: str = None) -> dict:
     Calls the API :py:obj:`~dhlab.constants.BASE_URL` endpoint
     ``/chunks_para``.
 
-    :param urn: uniform resource name of a document.
+    :param str urn: uniform resource name of a document.
     """
 
     if urn is None:
@@ -130,12 +133,9 @@ def get_reference(
 def find_urns(docids=None, mode: str = 'json') -> pd.DataFrame:
     """Return a list of URNs.
 
-    :param docids: list of document IDs as a dictionary {docid: URN} or a pandas dataframe.
-    :param mode: Default 'json'.
-    :return:
-
-    .. warning:: Seemingly non-existent POST request URL.
-        May throw an error.
+    :param list docids: list of document IDs as a dictionary {docid: URN} or a pandas dataframe.
+    :param str mode: Default 'json'.
+    :return: the URNs that were found, in a `pandas.DataFrame`.
 
     """
     params = locals()
@@ -148,19 +148,35 @@ def find_urns(docids=None, mode: str = 'json') -> pd.DataFrame:
 
 
 def ngram_book(
-    word=['.'],
-    title=None,
-    period=None,
-    publisher=None,
-    lang=None,
-    city=None,
-    ddk=None,
-    topic=None
-):
-    """Get a time series for a word as string,
-    title is name of book period is (year, year),
-    lang is three letter iso code.
-    Use % as wildcard where appropriate - no wildcards in word and lang"""
+    word: Union[List, str] = ['.'],
+    title: str = None,
+    period: Tuple[int, int] = None,
+    publisher: str = None,
+    lang: str = None,
+    city: str = None,
+    ddk: str = None,
+    topic: str = None
+) -> pd.DataFrame:
+    """Get a time series for the occurrences of one or more words in books.
+
+    Filter the selection of books with metadata.
+    Use % as wildcard where appropriate - no wildcards in ``word`` or ``lang``.
+
+    :param word: Word(s) to search for.
+        Can be several words in a single string, separated by comma.
+    :type word: str or list of str
+    :param title: Title of a book to search through.
+    :param tuple[int,int] period: Start and end years of a time period,
+        given as ``(start year, end year)``.
+    :param str publisher: Name of a publisher.
+    :param str lang: Language as a 3-letter ISO code (e.g. ``"nob"`` or ``"nno"``)
+    :param str city: City a book was published in.
+    :param ddk: `Dewey Decimal Classification
+        <https://no.wikipedia.org/wiki/Deweys_desimalklassifikasjon>`_ number.
+    :param str topic: Topic of books
+    :return: a `pandas.DataFrame` with the resulting frequency counts of the word(s),
+    spread across years
+    """
     params = locals()
     if isinstance(word, str):
         # assume a comma separated string
