@@ -1,3 +1,5 @@
+from typing import Union
+
 from IPython.display import HTML
 from PIL import Image
 
@@ -65,10 +67,11 @@ def get_picture_from_urn(urn: Union[int, str], width: int = 0, height: int = 300
     """
     meta = iiif_manifest(urn)
     if 'error' not in meta:
+        resolver_url = "https://www.nb.no/services/image/resolver"
         if width == 0 and height == 0:
-            url = f"https://www.nb.no/services/image/resolver/{urn}/full/full/0/native.jpg"
+            url = f"{resolver_url}/{urn}/full/full/0/native.jpg"
         else:
-            url = f"https://www.nb.no/services/image/resolver/{urn}/full/{width},{height}/0/native.jpg"
+            url = f"{resolver_url}/{urn}/full/{width},{height}/0/native.jpg"
         # print(url)
     return Image.open(load_picture(url))
 
